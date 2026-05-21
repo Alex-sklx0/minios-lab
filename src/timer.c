@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include "timer.h"
 #include <signal.h>
 #include <sys/time.h>
@@ -26,6 +28,7 @@ int timer_get_slice(void) {
 
 void timer_start(void) {
     struct itimerval timer;
+    memset(&timer, 0, sizeof(timer));
     timer.it_value.tv_sec = current_slice_ms / 1000;
     timer.it_value.tv_usec = (current_slice_ms % 1000) * 1000;
     timer.it_interval.tv_sec = current_slice_ms / 1000;

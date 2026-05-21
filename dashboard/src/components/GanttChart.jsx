@@ -39,7 +39,9 @@ export default function GanttChart({ processes, getRelativeTime }) {
       canvas.height = Math.max(200, Object.keys(processes).length * 40 + 40);
 
       const now = getRelativeTime();
-      const timeWindow = Math.max(now, 10);
+      // Use a FIXED time window (30s) to show slice differences clearly
+      // rather than scaling to total execution time
+      const timeWindow = 30;
       const procs = Object.values(processes);
       const w = canvas.width;
       const h = canvas.height;
@@ -54,13 +56,17 @@ export default function GanttChart({ processes, getRelativeTime }) {
       ctx.fillStyle = '#111827';
       ctx.fillRect(0, 0, w, h);
 
+      // Calculate sliding time window: always show last 30 seconds
+      const windowStart = Math.max(0, now - timeWindow);
+      const windowEnd = windowStart + timeWindow;
+
       // Time axis
       const numTicks = Math.max(5, Math.floor(chartW / 100));
       ctx.fillStyle = '#6b7280';
       ctx.font = '11px monospace';
       for (let i = 0; i <= numTicks; i++) {
         const x = labelW + (chartW * i / numTicks);
-        const t = (timeWindow * i / numTicks).toFixed(1);
+        const t = (windowStart + (timeWindow * i / numTicks)).toFixed(1);
         ctx.fillText(`${t}s`, x, 15);
         ctx.strokeStyle = '#1f2937';
         ctx.beginPath();
@@ -86,10 +92,18 @@ export default function GanttChart({ processes, getRelativeTime }) {
         ctx.fillText(proc.name, 10, y + 28);
 
         // Segments — use the process-specific color
+        // Only render segments within the current time window
         (proc.segments || []).forEach(seg => {
-          const startX = labelW + (seg.start / timeWindow) * chartW;
+          // Skip segments outside the current window
           const segEnd = seg.end || (proc.state === 'TERMINATED' ? seg.start : now);
-          const endX = labelW + (segEnd / timeWindow) * chartW;
+          if (segEnd < windowStart || seg.start > windowEnd) return;
+
+          // Clip segment start/end to window boundaries
+          const clippedStart = Math.max(seg.start, windowStart);
+          const clippedEnd = Math.min(segEnd, windowEnd);
+
+          const startX = labelW + ((clippedStart - windowStart) / timeWindow) * chartW;
+          const endX = labelW + ((clippedEnd - windowStart) / timeWindow) * chartW;
           const segW = Math.max(endX - startX, 1);
 
           ctx.fillStyle = procColor;

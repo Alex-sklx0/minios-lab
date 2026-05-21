@@ -1,6 +1,7 @@
 const net = require('net');
 const fs = require('fs');
 const readline = require('readline');
+const { execSync } = require('child_process');
 const { WebSocketServer } = require('ws');
 
 const SOCK_PATH = process.env.SOCK_PATH || '/tmp/minios.sock';
@@ -34,6 +35,33 @@ const server = net.createServer((client) => {
 
     client.on('close', () => {
         console.log('[bridge] Scheduler desconectado');
+        
+        // Notificar a todos los dashboards que el scheduler se cerró
+        const msg = JSON.stringify({
+            type: 'SCHEDULER_STOPPED',
+            ts: new Date().getTime() / 1000
+        }) + '\n';
+        
+        wss.clients.forEach(ws => {
+            if (ws.readyState === 1) ws.send(msg);
+        });
+        
+        console.log('[bridge] Notificado a dashboards que scheduler se cerró');
+        
+        // Cerrar dashboard y bridge
+        setTimeout(() => {
+            console.log('[bridge] Cerrando dashboard en puerto 5173...');
+            try {
+                // Matar el proceso vite (dashboard)
+                execSync("pkill -f 'vite' 2>/dev/null || true", { stdio: 'ignore' });
+                console.log('[bridge] Dashboard cerrado');
+            } catch (e) {
+                console.log('[bridge] Dashboard ya estaba cerrado');
+            }
+            
+            console.log('[bridge] Cerrando bridge...');
+            process.exit(0);
+        }, 100);
     });
 
     client.on('error', (err) => {

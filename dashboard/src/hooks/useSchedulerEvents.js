@@ -164,6 +164,13 @@ export default function useSchedulerEvents() {
             case 'SLICE_CHANGED':
               setCurrentSlice(event.new_ms);
               break;
+
+            case 'SCHEDULER_STOPPED':
+              // Scheduler se cerró - limpiar tabla de procesos
+              setProcesses({});
+              setCurrentSlice(500);
+              console.log('[dashboard] Scheduler se cerró - tabla limpiada');
+              break;
           }
         } catch (e) {
           console.error('Parse error:', e);

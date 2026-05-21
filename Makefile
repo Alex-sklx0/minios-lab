@@ -23,7 +23,7 @@ PROG_BINS = $(patsubst programs/%.c, programs/bin/%, $(PROG_SRCS))
 all: minios programs
 
 minios: $(SRCS)
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -o $@ $^ -lm
 
 programs: $(PROG_BINS)
 
